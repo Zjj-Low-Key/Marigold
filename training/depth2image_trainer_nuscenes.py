@@ -52,7 +52,10 @@ from training.dataset_configuration import prepare_dataset,Disparity_Normalizati
 from Inference.depth_pipeline_half import DepthEstimationPipeline
 # from Inference.depth_pipeline import DepthEstimationPipeline
 from PIL import Image
-
+from dataloader.nuscenes_dataset import *
+from config.config import get_cfg
+import albumentations as A
+from torch.utils.data import Dataset, Subset, DataLoader
 # Will error if the minimal version of diffusers is not installed. Remove at your own risks.
 check_min_version("0.26.0.dev0")
 
@@ -388,6 +391,7 @@ def main():
     ''' ------------------------Configs Preparation----------------------------'''
     # give the args parsers
     args = parse_args()
+    cfg = get_cfg()
     # save  the tensorboard log files
     logging_dir = os.path.join(args.output_dir, args.logging_dir)
     accelerator_project_config = ProjectConfiguration(project_dir=args.output_dir, logging_dir=logging_dir)
@@ -548,14 +552,18 @@ def main():
         weight_decay=args.adam_weight_decay,
         eps=args.adam_epsilon,
     )
+    
     with accelerator.main_process_first():
-        (train_loader,test_loader), dataset_config_dict = prepare_dataset(data_name=args.dataset_name,
-                                                                      datapath=args.dataset_path,
-                                                                      trainlist=args.trainlist,
-                                                                      vallist=args.vallist,batch_size=args.train_batch_size,
-                                                                      test_batch=1,
-                                                                      datathread=args.dataloader_num_workers,
-                                                                      logger=logger)
+        trans = A.Compose([
+            A.Resize([800,450]),
+            A.HorizontalFlip(p=0.5),
+            A.RandomBrightnessContrast(brightness_limit=(0,0.4),contrast_limit=(0,0.4),p=1),
+            A.MotionBlur(blur_limit=7,p=1)
+        ])
+        train_data=NuScenesDataset(transformer=trans,dataset_version='trainval')
+        train_loader=DataLoader(train_data,batch_size=1,shuffle=True,num_workers=4)
+        test_data=NuScenesDataset(transformer=trans,dataset_version='test')
+        test_loader=DataLoader(test_data,batch_size=1,shuffle=False,num_workers=4)
 
     # because the optimizer not optimized every time, so we need to calculate how many steps it optimizes,
     # it is usually optimized by 
@@ -685,8 +693,8 @@ def main():
         for step, batch in enumerate(train_loader):
             with accelerator.accumulate(unet):
                 # convert the images and the depths into lantent space.
-                left_image_data = batch['image']
-                left_disparity = batch['depth']
+                left_image_data = batch['color',0]
+                left_disparity = batch['depth_gt']
                 
                 left_disp_single = left_disparity.unsqueeze(1)
 

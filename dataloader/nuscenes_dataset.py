@@ -21,12 +21,12 @@ from config.config import convert_to_dict
 
 
 class NuScenesDataset:
-    def __init__(self, cfg, transform, dataset_version):
+    def __init__(self, transform, dataset_version='trainval'):
         self.console_logger = logging.getLogger("pytorch_lightning.core")
         self.transform = transform
         self.dataset_version = dataset_version
-        self.dataroot = os.path.join(cfg.DATASET.DATAROOT, self.dataset_version)
-        self.drop_static = cfg.DATASET.DROP_STATIC
+        self.dataroot = os.path.join('/data/dataset/nuscenes', self.dataset_version)
+        self.drop_static = True
 
         self.orientation_to_camera = {
             "front": "CAM_FRONT",
@@ -36,7 +36,7 @@ class NuScenesDataset:
             "back_left": "CAM_BACK_LEFT",
             "back": "CAM_BACK"
         }
-        self.camera_sensors = [self.orientation_to_camera[orientation] for orientation in cfg.DATASET.ORIENTATIONS]
+        self.camera_sensors = [self.orientation_to_camera[orientation] for orientation in ['front','back']]
 
         self.console_logger.info(f"[Info] Initializing NuScenes {dataset_version} official database...")
         self.nusc = NuScenes(version="v1.0-" + self.dataset_version, dataroot=self.dataroot, verbose=False)
@@ -45,19 +45,19 @@ class NuScenesDataset:
         self.nusc_explorer = NuScenesExplorer(self.nusc)
         self.console_logger.info(f"[Info] Finished initializing NuScenes {dataset_version} official database!")
 
-        self.original_width = cfg.DATASET.ORIGINAL_SIZE.WIDTH
-        self.original_height = cfg.DATASET.ORIGINAL_SIZE.HEIGHT
-        self.res_width = cfg.DATASET.AUGMENTATION.RESIZE.WIDTH
-        self.res_height = cfg.DATASET.AUGMENTATION.RESIZE.HEIGHT
-        self.scales = cfg.DATASET.SCALES
-        self.temp_context = cfg.DATASET.TEMP_CONTEXT
-        self.weather_conditions_train = cfg.DATASET.WEATHER.TRAIN
-        self.weather_conditions_val = cfg.DATASET.WEATHER.VAL
-        self.weather_conditions_eval = cfg.DATASET.WEATHER.TEST
+        self.original_width = 1600
+        self.original_height = 900
+        self.res_width = 800
+        self.res_height = 450
+        self.scales = [0, 1, 2, 3]
+        self.temp_context = [0, -1, 1]
+        self.weather_conditions_train = ['day-clear', 'day-rain', 'night-clear', 'night-rain'] 
+        self.weather_conditions_val = ['day-clear', 'day-rain', 'night-clear', 'night-rain'] 
+        self.weather_conditions_eval = ['day-clear', 'day-rain', 'night-clear', 'night-rain'] 
 
-        self.load_depth_gt = cfg.DATASET.LOAD.GT.DEPTH
-        self.load_pose_gt = cfg.DATASET.LOAD.GT.POSE
-        self.load_color_full_size = cfg.DATASET.LOAD.COLOR_FULL_SIZE
+        self.load_depth_gt = True
+        self.load_pose_gt = False
+        self.load_color_full_size = False
 
         if dataset_version in ['trainval', 'mini']:
             self.scenes_weather_info = self.get_scenes_weather_info()
@@ -135,7 +135,7 @@ class NuScenesDataset:
                 sample[('pose_gt', temp)] = torch.Tensor(self.get_pose(frame_idx, camera_sensor, temp))
 
         # Apply color augmentations including resizing, flipping and color jitter
-        return self.transform[mode](sample)
+        return self.transform(sample)
 
     def get_cam_sample_data(self, frame_index, camera_sensor, temp_shift):
         keyframe = self.nusc.get('sample_data', self.nusc.sample[frame_index]['data'][camera_sensor])

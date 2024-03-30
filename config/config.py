@@ -73,7 +73,7 @@ _C.LOAD.SPLIT_FILES_PATH = None  # Split files for the dataset (only used for Ro
 _C.LOAD.FILTER_FILES_PATH = None  # To filter overexposed and static samples (only used for RobotCar)
 
 _C.DATASET = CN()
-_C.DATASET.DATAROOT = '/mnt/data/nuscenes'  # Path to main data folder containing nuScenes or RobotCar
+_C.DATASET.DATAROOT = '/data/dataset/nuscenes'  # Path to main data folder containing nuScenes or RobotCar
 _C.DATASET.VERSION = 'full'  # Mainly used for nuScenes to be able to load also mini or full i.e. trainval + test (optional)
 _C.DATASET.NAME = 'nuscenes'  # Dataset name
 _C.DATASET.ORIGINAL_SIZE = CN()
