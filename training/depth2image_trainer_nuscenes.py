@@ -557,8 +557,9 @@ def main():
         trans = A.Compose([
             A.Resize([800,450]),
             A.HorizontalFlip(p=0.5),
-            A.RandomBrightnessContrast(brightness_limit=(0,0.4),contrast_limit=(0,0.4),p=1),
-            A.MotionBlur(blur_limit=7,p=1)
+            A.RandomBrightnessContrast(brightness_limit=(0.8,1.2),contrast_limit=(0.8,1.2),p=1.0),
+            A.MotionBlur(blur_limit=9,p=1),
+            A.ToTensor()
         ])
         train_data=NuScenesDataset(transformer=trans,dataset_version='trainval')
         train_loader=DataLoader(train_data,batch_size=1,shuffle=True,num_workers=4)
